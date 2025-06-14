@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id    String @id
+  name  String
+  email String @unique
+
+  pdfs Pdf[]
+}
+
+model Pdf {
+  id        String   @id @default(uuid())
+  url       String
+  name      String
+  size      Int
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id])
+
+  chat   Chat? 
+}
+
+model Chat {
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+
+  pdfId String   @unique 
+  pdf   Pdf      @relation(fields: [pdfId], references: [id])
+
+  messages Message[] 
+}
+
+model Message {
+  id        String       @id @default(uuid())
+  chatId    String
+  chat      Chat         @relation(fields: [chatId], references: [id])
+  content   String
+  createdAt DateTime     @default(now())
+  owner     OwnerMessage
+}
+
+enum OwnerMessage {
+  AI
+  USER
+}

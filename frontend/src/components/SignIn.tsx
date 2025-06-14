@@ -41,7 +41,7 @@ const SignInPage = () => {
   }, [isSignedIn, isLoaded, user, getToken, navigate]);
 
   if (!isSignedIn) {
-    return <SignIn afterSignInUrl="/sign-in" />
+    return <SignIn forceRedirectUrl='/sign-in' fallbackRedirectUrl="/sign-in" />
   }
 
   return <div>Creating your account...</div>;

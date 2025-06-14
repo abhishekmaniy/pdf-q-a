@@ -1,4 +1,4 @@
-import { useAuth, useUser, SignIn as ClerkSignIn } from '@clerk/clerk-react';
+import { SignIn, useAuth, useUser } from '@clerk/clerk-react';
 import axios from 'axios';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -41,7 +41,7 @@ const SignInPage = () => {
   }, [isSignedIn, isLoaded, user, getToken, navigate]);
 
   if (!isSignedIn) {
-    return <ClerkSignIn forceRedirectUrl="/sign-in" fallbackRedirectUrl="/sign-in" />; 
+    return <SignIn afterSignInUrl="/sign-in" />
   }
 
   return <div>Creating your account...</div>;

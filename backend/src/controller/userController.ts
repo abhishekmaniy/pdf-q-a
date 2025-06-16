@@ -10,9 +10,19 @@ const createUser = async (req: Request, res: Response) => {
   }
 
   const existingUser = await db.user.findFirst({
-    where: { id }
+    where: { id },
+    include: {
+      pdfs: {
+        include: {
+          chat: {
+            include: {
+              messages: true
+            }
+          }
+        }
+      }
+    }
   })
-
 
   if (existingUser) {
     res.status(200).json({ user: existingUser })

@@ -7,9 +7,10 @@ import {
   AlertCircle,
   AlertTriangle
 } from 'lucide-react'
-import { UploadProgress } from '../types'
 import { useAuth } from '@clerk/clerk-react'
 import { useAppStore } from '@/store/store'
+import { UploadProgress } from '../types'
+import type { Pdf } from '../types'
 
 interface FileUploadProps {
   onClose: () => void
@@ -18,17 +19,14 @@ interface FileUploadProps {
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
 
-export function FileUpload ({ onClose, handleDocumentSelect }: FileUploadProps) {
+export function FileUpload({ onClose, handleDocumentSelect }: FileUploadProps) {
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([])
   const { getToken } = useAuth()
-  const { addPdf, user } = useAppStore()
+  const { addPdf } = useAppStore()
 
   const uploadToR2 = async (file: File) => {
-    const formData = new FormData()
-    formData.append('file', file)
-
     const localId = file.name + '-' + Date.now()
     setUploadProgress(prev => [
       ...prev,
@@ -37,36 +35,54 @@ export function FileUpload ({ onClose, handleDocumentSelect }: FileUploadProps) 
 
     try {
       const token = await getToken()
-      const res = await fetch(`${BACKEND_URL}/upload`, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          Authorization: `Bearer ${token}`
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', `${BACKEND_URL}/upload`)
+
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+
+      xhr.upload.onprogress = event => {
+        if (event.lengthComputable) {
+          const percentComplete = (event.loaded / event.total) * 100
+          setUploadProgress(prev =>
+            prev.map(item =>
+              item.id === localId
+                ? { ...item, progress: percentComplete }
+                : item
+            )
+          )
         }
-      })
+      }
 
-      if (!res.ok) throw new Error('Upload failed')
-      const data = await res.json()
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          const data: Pdf = JSON.parse(xhr.responseText)
+          addPdf(data)
+          handleDocumentSelect(data.id)
 
-      console.log('data', data)
-      addPdf(data)
-      console.log('State after adding PDF:', useAppStore.getState().pdfs)
+          setUploadProgress(prev =>
+            prev.map(item =>
+              item.id === localId
+                ? { ...item, progress: 100, status: 'completed' }
+                : item
+            )
+          )
 
-      console.log('user', user)
+          setTimeout(() => {
+            onClose()
+          }, 1000)
+        } else {
+          throw new Error(`Upload failed with status ${xhr.status}`)
+        }
+      }
 
-      handleDocumentSelect(data.id)
+      xhr.onerror = () => {
+        throw new Error('Upload failed')
+      }
 
-      setUploadProgress(prev =>
-        prev.map(item =>
-          item.id === localId
-            ? { ...item, progress: 100, status: 'completed' }
-            : item
-        )
-      )
-
-      setTimeout(() => {
-        onClose()
-      }, 1000)
+      xhr.send(formData)
     } catch (err) {
       console.error(err)
       setUploadProgress(prev =>
@@ -117,17 +133,12 @@ export function FileUpload ({ onClose, handleDocumentSelect }: FileUploadProps) 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true)
-    } else if (e.type === 'dragleave') {
-      setDragActive(false)
-    }
+    setDragActive(e.type === 'dragenter' || e.type === 'dragover')
   }, [])
 
   return (
     <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
       <div className='bg-white rounded-xl shadow-2xl max-w-md w-full'>
-        {/* Header */}
         <div className='flex items-center justify-between p-6 border-b border-gray-200'>
           <h2 className='text-xl font-semibold text-gray-900'>Upload PDF</h2>
           <button
@@ -138,7 +149,6 @@ export function FileUpload ({ onClose, handleDocumentSelect }: FileUploadProps) 
           </button>
         </div>
 
-        {/* Upload Area */}
         <div className='p-6'>
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 ${
@@ -193,7 +203,7 @@ export function FileUpload ({ onClose, handleDocumentSelect }: FileUploadProps) 
                 <div key={progress.id} className='bg-gray-50 rounded-lg p-3'>
                   <div className='flex items-center justify-between mb-2'>
                     <span className='text-sm text-gray-700 truncate'>
-                      {progress.id}
+                      {progress.id.split('-')[0]}
                     </span>
                     <div className='flex items-center'>
                       {progress.status === 'completed' && (

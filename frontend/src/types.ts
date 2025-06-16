@@ -32,3 +32,10 @@ export interface Message {
   owner: 'AI' | 'USER'
   chat?: Chat 
 }
+
+export interface UploadProgress {
+  id: string
+  progress: number
+  status: 'uploading' | 'completed' | 'error'
+  error?: string
+}

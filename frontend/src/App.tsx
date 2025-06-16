@@ -1,6 +1,6 @@
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth, useUser } from '@clerk/clerk-react'
 import axios from 'axios'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { ChatInterface } from './components/ChatInterface'
 import { FileUpload } from './components/FileUpload'
@@ -15,7 +15,7 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
 function App () {
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null)
   const [showUpload, setShowUpload] = useState(false)
-  const { isSignedIn, userId } = useAuth()
+  const { isSignedIn, userId, getToken } = useAuth()
   const {
     user,
     setUser,
@@ -41,7 +41,26 @@ function App () {
   useEffect(() => {
     const getUser = async () => {
       if (!isSignedIn) return
-      const response = await axios.get(`${BACKEND_URL}/user/${userId}`)
+      const token = await getToken()
+      const { user } = useUser()
+
+      if (!user) {
+        return
+      }
+
+      const response = await axios.post(
+        `${BACKEND_URL}/user`,
+        {
+          id: user.id,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+          email: user.emailAddresses[0]?.emailAddress
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      )
       initializeUserData(response.data)
     }
     getUser()

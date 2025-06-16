@@ -6,7 +6,6 @@ import { ChatInterface } from './components/ChatInterface'
 import { FileUpload } from './components/FileUpload'
 import { Layout } from './components/Layout'
 import { Sidebar } from './components/Sidebar'
-import SignIn from './components/SignIn'
 import { useAppStore } from './store/store'
 import { Message, Pdf, User } from './types'
 
@@ -153,7 +152,6 @@ function App () {
           </Layout>
         }
       />
-      <Route path='/sign-in' element={<SignIn />} />
     </Routes>
   )
 }

@@ -1,7 +1,7 @@
 import { FileText, Trash2, Calendar } from 'lucide-react'
 import { Button } from './ui/button'
 import { useNavigate } from 'react-router-dom'
-import { useAuth, UserButton } from '@clerk/clerk-react'
+import { SignInButton, useAuth, UserButton } from '@clerk/clerk-react'
 import { useAppStore } from '@/store/store'
 
 interface SidebarProps {
@@ -49,6 +49,7 @@ export function Sidebar({
       <div className="p-4 border-b">
         <button
           onClick={onUploadClick}
+          disabled={!isSignedIn}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-3 rounded-lg transition"
         >
           <div className="flex items-center justify-center space-x-2">
@@ -120,9 +121,7 @@ export function Sidebar({
         {isSignedIn ? (
           <UserButton />
         ) : (
-          <Button onClick={handleSignIn} className="w-full">
-            Sign In
-          </Button>
+          <SignInButton forceRedirectUrl={'/'} />
         )}
       </div>
     </div>

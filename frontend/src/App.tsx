@@ -7,76 +7,74 @@ import { FileUpload } from './components/FileUpload'
 import { Layout } from './components/Layout'
 import { Sidebar } from './components/Sidebar'
 import { useAppStore } from './store/store'
-import { Message, Pdf, User } from './types'
+import { Message, Pdf, User as AppUser } from './types'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
 
 function App () {
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null)
   const [showUpload, setShowUpload] = useState(false)
-  const { isSignedIn, userId, getToken } = useAuth()
+  const { isSignedIn, getToken } = useAuth()
+  const { user: clerkUser, isLoaded } = useUser()
   const {
     user,
     setUser,
-    pdfs,
     setPdfs,
-    chats,
     setChat,
+    pdfs,
+    chats,
     addMessageToChat,
-    getMessagesForChat
   } = useAppStore()
   const [isTyping, setIsTyping] = useState(false)
 
-  const initializeUserData = (user: User) => {
-    setUser(user)
-    setPdfs(user.pdfs)
-    user.pdfs.forEach((pdf: Pdf) => {
+  const initializeUserData = (fetchedUser: AppUser) => {
+    setUser(fetchedUser)
+    setPdfs(fetchedUser.pdfs)
+    fetchedUser.pdfs.forEach(pdf => {
       if (pdf.chat) {
         setChat(pdf.id, pdf.chat)
       }
     })
   }
 
+  // 👇 Fetch user from backend when signed in
   useEffect(() => {
-    const getUser = async () => {
-      if (!isSignedIn) return
-      const token = await getToken()
-      const { user } = useUser()
+    const fetchAndStoreUser = async () => {
+      if (!isSignedIn || !isLoaded || !clerkUser) return
 
-      if (!user) {
-        return
-      }
-
-      const response = await axios.post(
-        `${BACKEND_URL}/user`,
-        {
-          id: user.id,
-          name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-          email: user.emailAddresses[0]?.emailAddress
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
+      try {
+        const token = await getToken()
+        const response = await axios.post<AppUser>(
+          `${BACKEND_URL}/user`,
+          {
+            id: clerkUser.id,
+            name: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim(),
+            email: clerkUser.emailAddresses[0]?.emailAddress,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
-        }
-      )
-      initializeUserData(response.data)
+        )
+        initializeUserData(response.data)
+      } catch (error) {
+        console.error('Error fetching or creating user:', error)
+      }
     }
-    getUser()
-  }, [userId, isSignedIn])
 
-  const handleDocumentSelect = useCallback(
-    (id: string) => {
-      setActiveDocumentId(id)
-    },
-    [chats]
-  )
+    fetchAndStoreUser()
+  }, [isSignedIn, isLoaded, clerkUser])
+
+  const handleDocumentSelect = useCallback((id: string) => {
+    setActiveDocumentId(id)
+  }, [])
 
   const handleDocumentDelete = useCallback(
     async (documentId: string) => {
       try {
         await axios.delete(`${BACKEND_URL}/pdf/${documentId}`)
-        setPdfs(pdfs.filter(pdf => pdf.id !== documentId))
+        useAppStore.getState().removePdf(documentId)
         if (activeDocumentId === documentId) {
           setActiveDocumentId(null)
         }
@@ -84,14 +82,12 @@ function App () {
         console.error('Failed to delete document:', error)
       }
     },
-    [pdfs, activeDocumentId]
+    [activeDocumentId]
   )
 
   const handleSendMessage = useCallback(
     async (content: string) => {
       if (!activeDocumentId) return
-
-      console.log('Reach here 1')
 
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -102,22 +98,20 @@ function App () {
       }
 
       addMessageToChat(activeDocumentId, userMessage)
-
       setIsTyping(true)
-
-      console.log('Reach here 2')
 
       try {
         const response = await axios.post(`${BACKEND_URL}/chat`, {
           userMessage,
-          pdfId: activeDocumentId
+          pdfId: activeDocumentId,
         })
 
         const aiResponse: Message = response.data
         addMessageToChat(activeDocumentId, aiResponse)
-        setIsTyping(false)
       } catch (error) {
         console.error('Error getting AI response:', error)
+      } finally {
+        setIsTyping(false)
       }
     },
     [activeDocumentId]

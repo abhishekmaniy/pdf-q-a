@@ -1,75 +1,62 @@
-# 📄 AI-Powered PDF Chat App
-
-An AI-enhanced web app to upload, manage, and chat with your PDFs. Built with Clerk authentication, Zustand for state management, PostgreSQL with Prisma ORM, and an Express backend.
-
----
-
-## 🚀 Features
-
-- 🔐 **Clerk Authentication** (OAuth + email)
-- 📤 **Upload PDFs** and view details like size & upload date
-- 🗂️ **Manage your PDF library**
-- 💬 **AI Chat** (chat with your PDF contents)
-- ❌ **Delete PDFs** with instant feedback via toast notifications
-- 🧠 **Persistent user data** (PDFs and chat history)
-
----
-
-## 🛠️ Tech Stack
-
-| Frontend     | Backend      | Database     | Auth     |
-|--------------|--------------|--------------|----------|
-| React + Vite | Express.js   | PostgreSQL   | Clerk    |
-| Zustand      | Prisma ORM   |              | JWT (custom fallback) |
-| TailwindCSS  | REST APIs    |              |          |
-
----
-
-## 🧑‍💻 Local Development
-
-### 1. Clone the repo
-
-```bash
+🧑‍💻 Local Development
+1. Clone the repo
+bash
+Copy
+Edit
 git clone https://github.com/abhishekmaniy/pdf-q-a.git
 cd pdf-ai-chat
-
-### 2. Install dependencies
-
-# Frontend
+2. Install dependencies
+Frontend
+bash
+Copy
+Edit
 cd client
 npm install
-
-# Backend
+Backend
+bash
+Copy
+Edit
 cd ../server
 npm install
+3. Environment Variables
+Create a .env file in the server/ and client/ directories and add the following:
 
-### 3. Environment Variables
-# Backend
+Backend (server/.env)
+makefile
+Copy
+Edit
 GEMINI_API_KEY=
 DATABASE_URL=
 CLOUDFLARE_ACCESS_KEY=
-CLOUDFLARE_SCERET_KEY=
+CLOUDFLARE_SECRET_KEY=
 ACCOUNT_ID=
 CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
-# Frotnend 
+Frontend (client/.env)
+makefile
+Copy
+Edit
 VITE_CLERK_PUBLISHABLE_KEY=
 VITE_BACKEND_URL=
-
-### 4. Run the app
-# Terminal 1 - Backend
+4. Run the app
+Terminal 1 - Backend
+bash
+Copy
+Edit
 cd server
 npx prisma generate
 npx prisma migrate dev --name init
 npm run dev
-
-# Terminal 2 - Frontend
+Terminal 2 - Frontend
+bash
+Copy
+Edit
 cd client
 npm run dev
-
-
 🔍 Project Structure
-
+pgsql
+Copy
+Edit
 ├── client
 │   ├── components/
 │   ├── pages/
@@ -82,14 +69,13 @@ npm run dev
 │   ├── routes/
 │   ├── utils/
 │   └── index.ts
-
 📦 Deployment
-Frontend: Deploy on Vercel
+Frontend: Vercel
 
-Backend: Deploy on Render
+Backend: Render
 
 Database: PostgreSQL via Neon
 
-
 📬 Contact
-For suggestions, bugs, or feature requests, feel free to open an issue or contact me at abhishekmaniyar502@gmail.com.
+For suggestions, bugs, or feature requests, feel free to open an issue or contact me at:
+📧 abhishekmaniyar502@gmail.com

@@ -5,7 +5,6 @@ import formidable from 'formidable'
 import fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 import { db } from '../utils/db'
-import { create } from 'domain'
 
 const R2 = new S3Client({
   region: 'auto',
@@ -68,11 +67,19 @@ const uploadController = async (req: Request, res: Response) => {
           size: file.size,
           name: file.originalFilename,
           chat: {
-            create: {}
+            create: {
+              messages: {
+                create: []
+              }
+            }
           }
         },
         include: {
-          chat: true // If you want to fetch the created chat with the PDF
+          chat: {
+            include: {
+              messages: true
+            }
+          }
         }
       })
 

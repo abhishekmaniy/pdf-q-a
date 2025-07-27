@@ -1,78 +1,125 @@
-import { User, Pdf, Chat, Message } from '@/types'
+import { User, Pdf, Chat, Message, UploadProgress } from '@/types'
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 
 interface AppState {
   user: User | null
-  pdfs: Pdf[]
   activePdfId: string | null
-  chats: Record<string, Chat | null>
+  uploadProgress: Record<string, UploadProgress>
 
+  // Setters
   setUser: (user: User | null) => void
 
   setPdfs: (pdfs: Pdf[]) => void
   addPdf: (pdf: Pdf) => void
-  removePdf: (id: string) => void
-  setActivePdf: (id: string | null) => void
+  removePdf: (pdfId: string) => void
+  setActivePdf: (pdfId: string | null) => void
 
-  setChat: (pdfId: string, chat: Chat) => void
+  setChatForPdf: (pdfId: string, chat: Chat) => void
   addMessageToChat: (pdfId: string, message: Message) => void
+  getMessagesForPdf: (pdfId: string) => Message[]
 
-  getMessagesForChat: (pdfId: string) => Message[]
+  setUploadProgress: (progress: UploadProgress) => void
+  removeUploadProgress: (id: string) => void
 }
 
-export const useAppStore = create<AppState>()(
-  persist(
-    (set, get) => ({
-      user: null,
-      pdfs: [],
-      activePdfId: null,
-      chats: {},
+export const useAppStore = create<AppState>((set, get) => ({
+  user: null,
+  activePdfId: null,
+  uploadProgress: {},
 
-      setUser: user => set({ user }),
+  setUser: user => set({ user }),
 
-      setPdfs: pdfs => set({ pdfs }),
-      addPdf: pdf => set(state => ({ pdfs: [pdf, ...state.pdfs] })),
-      removePdf: id =>
-        set(state => {
-          const { [id]: removedChat, ...remainingChats } = state.chats
-          return {
-            pdfs: state.pdfs.filter(pdf => pdf.id !== id),
-            activePdfId: state.activePdfId === id ? null : state.activePdfId,
-            chats: remainingChats
-          }
-        }),
-      setActivePdf: id => set({ activePdfId: id }),
-
-      setChat: (pdfId, chat) =>
-        set(state => ({
-          chats: {
-            ...state.chats,
-            [pdfId]: chat
-          }
-        })),
-
-      addMessageToChat: (pdfId, message) =>
-        set(state => {
-          const chat = state.chats[pdfId]
-          if (!chat) return state
-          return {
-            chats: {
-              ...state.chats,
-              [pdfId]: {
-                ...chat,
-                messages: [...chat.messages, message]
-              }
-            }
-          }
-        }),
-
-      // ✅ Retrieve messages for a given pdfId
-      getMessagesForChat: (pdfId: string) => {
-        const chat = get().chats[pdfId]
-        return chat?.messages || []
+  setPdfs: pdfs =>
+    set(state => {
+      if (!state.user) return state
+      return {
+        user: { ...state.user, pdfs }
       }
     }),
-    { name: 'app-storage' }
-  )
-)
+
+  addPdf: pdf =>
+    set(state => {
+      if (!state.user) return state
+      return {
+        user: {
+          ...state.user,
+          pdfs: [pdf, ...(state.user.pdfs || [])]
+        }
+      }
+    }),
+
+  removePdf: pdfId =>
+    set(state => {
+      if (!state.user) return state
+      const updatedPdfs = state.user.pdfs.filter(pdf => pdf.id !== pdfId)
+      return {
+        activePdfId: state.activePdfId === pdfId ? null : state.activePdfId,
+        user: {
+          ...state.user,
+          pdfs: updatedPdfs
+        }
+      }
+    }),
+
+  setActivePdf: pdfId => set({ activePdfId: pdfId }),
+
+  setChatForPdf: (pdfId, chat) =>
+    set(state => {
+      if (!state.user) return state
+      const updatedPdfs = state.user.pdfs.map(pdf =>
+        pdf.id === pdfId ? { ...pdf, chat } : pdf
+      )
+      return {
+        user: {
+          ...state.user,
+          pdfs: updatedPdfs
+        }
+      }
+    }),
+
+  addMessageToChat: (pdfId, message) =>
+    set(state => {
+      if (!state.user) return state
+
+      const updatedPdfs = state.user.pdfs.map(pdf => {
+        if (pdf.id !== pdfId) return pdf
+        if (!pdf.chat) return pdf
+
+        return {
+          ...pdf,
+          chat: {
+            ...pdf.chat,
+            messages: [...pdf.chat.messages, message]
+          }
+        }
+      })
+
+      return {
+        user: {
+          ...state.user,
+          pdfs: updatedPdfs
+        }
+      }
+    }),
+
+  getMessagesForPdf: pdfId => {
+    const user = get().user
+    if (!user || !user.pdfs) return []
+    const pdf = user.pdfs.find(p => p.id === pdfId)
+    return pdf?.chat?.messages || []
+  },
+
+  setUploadProgress: progress =>
+    set(state => ({
+      uploadProgress: {
+        ...state.uploadProgress,
+        [progress.id]: progress
+      }
+    })),
+
+  removeUploadProgress: id =>
+    set(state => {
+      const { [id]: _, ...rest } = state.uploadProgress
+      return { uploadProgress: rest }
+    })
+}))

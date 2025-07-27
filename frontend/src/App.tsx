@@ -7,7 +7,9 @@ import { FileUpload } from './components/FileUpload'
 import { Layout } from './components/Layout'
 import { Sidebar } from './components/Sidebar'
 import { useAppStore } from './store/store'
-import { Message, Pdf, User as AppUser } from './types'
+import { Toaster } from 'react-hot-toast'
+import toast from 'react-hot-toast'
+import { User as AppUser, Message } from './types'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
 
@@ -16,25 +18,30 @@ function App () {
   const [showUpload, setShowUpload] = useState(false)
   const { isSignedIn, getToken } = useAuth()
   const { user: clerkUser, isLoaded } = useUser()
-  const {
-    user,
-    setUser,
-    setPdfs,
-    setChat,
-    pdfs,
-    chats,
-    addMessageToChat,
-  } = useAppStore()
+  const { setUser, setPdfs, addMessageToChat, user, setChatForPdf } =
+    useAppStore()
   const [isTyping, setIsTyping] = useState(false)
 
+  console.log(user)
+
   const initializeUserData = (fetchedUser: AppUser) => {
-    setUser(fetchedUser)
-    setPdfs(fetchedUser.pdfs)
-    fetchedUser.pdfs.forEach(pdf => {
-      if (pdf.chat) {
-        setChat(pdf.id, pdf.chat)
-      }
+    setUser({
+      ...fetchedUser,
+      pdfs: fetchedUser.pdfs || [] // fallback to empty array
     })
+
+    // Prevent .forEach on undefined
+    if (Array.isArray(fetchedUser.pdfs)) {
+      setPdfs(fetchedUser.pdfs)
+
+      fetchedUser.pdfs.forEach(pdf => {
+        if (pdf.chat) {
+          setChatForPdf(pdf.id, pdf.chat)
+        }
+      })
+    } else {
+      setPdfs([]) // fallback just in case
+    }
   }
 
   // 👇 Fetch user from backend when signed in
@@ -44,20 +51,23 @@ function App () {
 
       try {
         const token = await getToken()
-        const response = await axios.post<AppUser>(
+        const response = await axios.post(
           `${BACKEND_URL}/user`,
           {
             id: clerkUser.id,
-            name: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim(),
-            email: clerkUser.emailAddresses[0]?.emailAddress,
+            name: `${clerkUser.firstName || ''} ${
+              clerkUser.lastName || ''
+            }`.trim(),
+            email: clerkUser.emailAddresses[0]?.emailAddress
           },
           {
             headers: {
-              Authorization: `Bearer ${token}`,
-            },
+              Authorization: `Bearer ${token}`
+            }
           }
         )
-        initializeUserData(response.data)
+        console.log(response.data.user)
+        initializeUserData(response.data.user)
       } catch (error) {
         console.error('Error fetching or creating user:', error)
       }
@@ -73,13 +83,15 @@ function App () {
   const handleDocumentDelete = useCallback(
     async (documentId: string) => {
       try {
-        await axios.delete(`${BACKEND_URL}/pdf/${documentId}`)
+        await axios.delete(`${BACKEND_URL}/upload/${documentId}`)
         useAppStore.getState().removePdf(documentId)
         if (activeDocumentId === documentId) {
           setActiveDocumentId(null)
         }
+        toast.success('PDF deleted successfully')
       } catch (error) {
         console.error('Failed to delete document:', error)
+        toast.error('Failed to delete PDF')
       }
     },
     [activeDocumentId]
@@ -103,7 +115,7 @@ function App () {
       try {
         const response = await axios.post(`${BACKEND_URL}/chat`, {
           userMessage,
-          pdfId: activeDocumentId,
+          pdfId: activeDocumentId
         })
 
         const aiResponse: Message = response.data
@@ -118,35 +130,39 @@ function App () {
   )
 
   return (
-    <Routes>
-      <Route
-        path='/'
-        element={
-          <Layout
-            sidebar={
-              <Sidebar
+    <>
+      <Toaster position='top-right' />
+
+      <Routes>
+        <Route
+          path='/'
+          element={
+            <Layout
+              sidebar={
+                <Sidebar
+                  activeDocumentId={activeDocumentId}
+                  onDocumentSelect={handleDocumentSelect}
+                  onDocumentDelete={handleDocumentDelete}
+                  onUploadClick={() => setShowUpload(true)}
+                />
+              }
+            >
+              <ChatInterface
+                isTyping={isTyping}
                 activeDocumentId={activeDocumentId}
-                onDocumentSelect={handleDocumentSelect}
-                onDocumentDelete={handleDocumentDelete}
-                onUploadClick={() => setShowUpload(true)}
+                onSendMessage={handleSendMessage}
               />
-            }
-          >
-            <ChatInterface
-              isTyping={isTyping}
-              activeDocumentId={activeDocumentId}
-              onSendMessage={handleSendMessage}
-            />
-            {showUpload && (
-              <FileUpload
-                handleDocumentSelect={handleDocumentSelect}
-                onClose={() => setShowUpload(false)}
-              />
-            )}
-          </Layout>
-        }
-      />
-    </Routes>
+              {showUpload && (
+                <FileUpload
+                  handleDocumentSelect={handleDocumentSelect}
+                  onClose={() => setShowUpload(false)}
+                />
+              )}
+            </Layout>
+          }
+        />
+      </Routes>
+    </>
   )
 }
 

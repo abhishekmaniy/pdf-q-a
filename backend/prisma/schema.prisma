@@ -23,25 +23,25 @@ model Pdf {
   createdAt DateTime @default(now())
 
   userId String
-  user   User @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
 
-  chat   Chat? 
+  chat Chat? // DO NOT add fields/references/onDelete here
 }
 
 model Chat {
-  id        String    @id @default(uuid())
-  createdAt DateTime  @default(now())
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
 
-  pdfId String   @unique 
-  pdf   Pdf      @relation(fields: [pdfId], references: [id])
+  pdfId String @unique
+  pdf   Pdf    @relation(fields: [pdfId], references: [id], onDelete: Cascade)
 
-  messages Message[] 
+  messages Message[]
 }
 
 model Message {
   id        String       @id @default(uuid())
   chatId    String
-  chat      Chat         @relation(fields: [chatId], references: [id])
+  chat      Chat         @relation(fields: [chatId], references: [id], onDelete: Cascade)
   content   String
   createdAt DateTime     @default(now())
   owner     OwnerMessage

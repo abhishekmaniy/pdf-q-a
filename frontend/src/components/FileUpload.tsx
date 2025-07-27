@@ -11,6 +11,7 @@ import { useAuth } from '@clerk/clerk-react'
 import { useAppStore } from '@/store/store'
 import { UploadProgress } from '../types'
 import type { Pdf } from '../types'
+import toast from 'react-hot-toast'
 
 interface FileUploadProps {
   onClose: () => void
@@ -19,7 +20,7 @@ interface FileUploadProps {
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
 
-export function FileUpload({ onClose, handleDocumentSelect }: FileUploadProps) {
+export function FileUpload ({ onClose, handleDocumentSelect }: FileUploadProps) {
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([])
@@ -45,12 +46,11 @@ export function FileUpload({ onClose, handleDocumentSelect }: FileUploadProps) {
 
       xhr.upload.onprogress = event => {
         if (event.lengthComputable) {
-          const percentComplete = (event.loaded / event.total) * 100
+          const percentComplete = Math.round((event.loaded / event.total) * 100)
+          const progress = percentComplete >= 100 ? 99 : percentComplete
           setUploadProgress(prev =>
             prev.map(item =>
-              item.id === localId
-                ? { ...item, progress: percentComplete }
-                : item
+              item.id === localId ? { ...item, progress } : item
             )
           )
         }
@@ -59,9 +59,8 @@ export function FileUpload({ onClose, handleDocumentSelect }: FileUploadProps) {
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           const data: Pdf = JSON.parse(xhr.responseText)
-          addPdf(data)
-          handleDocumentSelect(data.id)
 
+          // Show 100% only after backend confirms success
           setUploadProgress(prev =>
             prev.map(item =>
               item.id === localId
@@ -70,18 +69,33 @@ export function FileUpload({ onClose, handleDocumentSelect }: FileUploadProps) {
             )
           )
 
-          setTimeout(() => {
-            onClose()
-          }, 1000)
+          addPdf(data) // ✅ Add PDF to Zustand (user.pdfs)
+          handleDocumentSelect(data.id)
+
+          toast.success('File uploaded successfully!')
+          setTimeout(onClose, 1000)
         } else {
-          throw new Error(`Upload failed with status ${xhr.status}`)
+          setUploadProgress(prev =>
+            prev.map(item =>
+              item.id === localId
+                ? { ...item, status: 'error', error: 'Upload failed' }
+                : item
+            )
+          )
+          toast.error(`Upload failed. Status: ${xhr.status}`)
         }
       }
 
       xhr.onerror = () => {
-        throw new Error('Upload failed')
+        setUploadProgress(prev =>
+          prev.map(item =>
+            item.id === localId
+              ? { ...item, status: 'error', error: 'Upload failed' }
+              : item
+          )
+        )
+        toast.error('Network error during upload.')
       }
-
       xhr.send(formData)
     } catch (err) {
       console.error(err)
@@ -93,6 +107,7 @@ export function FileUpload({ onClose, handleDocumentSelect }: FileUploadProps) {
         )
       )
       setError('Upload failed. Please try again.')
+      toast.error('Upload failed. Please try again.')
     }
   }
 

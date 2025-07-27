@@ -18,9 +18,10 @@ export function ChatInterface ({
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const { getMessagesForChat, pdfs } = useAppStore()
-  const messages = getMessagesForChat(activeDocumentId!)
-  const activeDocument = pdfs.find(pdf => pdf.id === activeDocumentId)
+  const { user, getMessagesForPdf } = useAppStore()
+  const pdfs = user?.pdfs
+  const messages = getMessagesForPdf(activeDocumentId!)
+  const activeDocument = pdfs?.find(pdf => pdf.id === activeDocumentId)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -73,7 +74,9 @@ export function ChatInterface ({
           <h2 className='text-base font-semibold text-gray-900'>
             {activeDocument.name}
           </h2>
-          <p className='text-xs text-gray-500'>Ask me anything about this document</p>
+          <p className='text-xs text-gray-500'>
+            Ask me anything about this document
+          </p>
         </div>
       </div>
 
@@ -81,7 +84,9 @@ export function ChatInterface ({
       <div className='flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-gray-50'>
         {messages.length === 0 ? (
           <div className='text-center py-12 text-gray-500'>
-            <p className='text-sm'>Start the conversation about "{activeDocument.name}"</p>
+            <p className='text-sm'>
+              Start the conversation about "{activeDocument.name}"
+            </p>
           </div>
         ) : (
           <>
@@ -107,7 +112,10 @@ export function ChatInterface ({
             rows={1}
             style={{
               minHeight: '40px',
-              height: Math.min(Math.max(40, inputValue.split('\n').length * 20), 112)
+              height: Math.min(
+                Math.max(40, inputValue.split('\n').length * 20),
+                112
+              )
             }}
           />
           <button

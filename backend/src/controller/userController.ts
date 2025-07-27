@@ -30,8 +30,21 @@ const createUser = async (req: Request, res: Response) => {
   }
 
   const user = await db.user.create({
-    data: { id, name, email }
+    data: { id, name, email },
+    include: {
+      pdfs: {
+        include: {
+          chat: {
+            include: {
+              messages: true
+            }
+          }
+        }
+      }
+    }
   })
+
+  res.status(201).json({ user })
 
   res.status(201).json({ user })
   return
@@ -62,7 +75,9 @@ const getUser = async (req: Request, res: Response) => {
       return
     }
 
-    res.json(user)
+    console.log(user)
+
+    res.json({ user })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Internal server error' })
